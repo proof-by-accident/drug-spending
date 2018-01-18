@@ -11,6 +11,10 @@ names(dat) <- tolower(names(dat))
 untidy.names <- c('nonproprietaryname', 'substancename', 'active_numerator_strength', 'active_ingred_unit')
 tidy.names <- names( subset( dat[1,], select = -c(nonproprietaryname, substancename, active_numerator_strength, active_ingred_unit) ) )
 
+#Count num of drugs w/ multiple active ingreds
+act.ingreds <- strsplit( unlist(sapply( dat$active_ingred_unit, as.character )), c(', |; |,|;| and ') )
+num.act.ingreds <- unlist( lapply( act.ingreds, length ) )
+#length(num.act.ingreds[ num.act.ingreds > 1])
 
 #PRELIMS FOR TIDYING
 
@@ -81,6 +85,14 @@ for (i in 1:dim(dat)[1] ){
         tidy.dat <- rbind( tidy.dat, sapply( new.row, safe.lower) )
     }
 }
+#Some nonproprietarynames still start with an "and " for some reason, so let's clean them up
+to.fix <- sapply( dat$nonproprietaryname, function(x) { (substring(x,1,4)=='and ')*!is.na(x) } )
+to.fix <- unlist( sapply( to.fix, function(x) { if( is.na(x) ){ return(FALSE) } } ) )
+fixed <- sapply( dat[to.fix,]$nonproprietaryname, function(x) { substring(x,5) } )
+dat[ to.fix,]$nonproprietaryname <- fixed
+
+#Save tidy data
+write.csv(tidy.dat, 'FDA_NDC_product_tidy.csv', row.names = FALSE)
 
 #Scrape off that first integer line
 tidy.dat <- tidy.dat[2:dim(tidy.dat)[1], ]
@@ -105,7 +117,6 @@ name.mismatch <- tidy.dat[!np.sn.misses, untidy.names]
 #Let's see what some random rows of the name mismatches look like...
 name.mismatch[sample( 1:dim(name.mismatch)[1], 100 ), untidy.names[1:2]]
 #again just a lot of sloppy entry mistmatch stuff
-
 
 ###################################################################
 #TRASH
