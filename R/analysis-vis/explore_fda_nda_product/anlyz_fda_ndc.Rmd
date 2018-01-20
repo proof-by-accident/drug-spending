@@ -1,0 +1,91 @@
+---
+title: "Analyzing the FDA_NDC_Product Dataset"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(reshape2)
+```
+
+## Tidying
+Let's read in our data...
+```{r}
+ndc.dat <- read.csv('fda_ndc_product.csv')
+spd.dat <- read.csv('spending_2011.csv')
+````
+
+What's in there?
+```{r}
+names(ndc.dat)
+````
+
+##Preliminary Exploration
+###How many drugs have multiple active ingredients?
+```{r}
+occurences <- sapply( ndc.dat$productid, function(x) {
+  occur <- ndc.dat[ ndc.dat$productid==x, c("nonproprietaryname") ]
+  return( length( occur ) )
+})
+````
+
+Every entry in the original dataset corresponded to a unique **productid**...
+```{r}
+length( unique(ndc.dat$productid) )
+````
+
+...and there are a couple fewer **productndcs**.  It seems like the **productid** would be the best way through which to cross-reference the datasets.
+```{r}
+length( unique(ndc.dat$productndc) )
+length( unique(ndc.dat$productid) ) - length( unique(ndc.dat$productndc) )
+````
+
+There are far fewer **nonproprietarynames** and **substancenames**.
+```{r}
+length( unique(ndc.dat$nonproprietaryname) )
+length( unique(ndc.dat$substancename) )
+````
+
+Let's see how many drugs have more than one active ingredient:
+```{r}
+pid.agg.ndc <- dcast(ndc.dat, productid ~ .)
+names( pid.agg.ndc ) <- c('productid', 'occurences')
+#About 26k:
+length( pid.agg.ndc[ pid.agg.ndc$occurences > 1, 1] )
+````
+
+###Comparing to the spending_2011 dataset
+The spending dataset needs to be converted to lowercase for a few columns.  To do this I'm going to wrap the tolower() function in an error catcher, as this was used to lowercase the FDA_NDC dataset as well and things won't get derailed by weird cornercases.
+```{r}
+safe.lower <- function(x){
+    result <- tryCatch({
+        sapply( x, tolower)
+    },
+    error = function(e){
+        return( as.character(x) )
+    })
+    return( result )
+    }
+
+upper.cols <- c('drugname_brand', 'drugname_generic')
+spd.dat[, upper.cols] <- sapply( spd.dat[, upper.cols], safe.lower )
+
+head(spd.dat)
+````
+
+There seems to be some weird **drugname_brand** and **drugname_generic** entries.  I'm going to the **proprietaryname** column  If there are any matches I'm going to pull the corresponding **productids** and hold them in a vector.
+```{r}
+ndc.pid <- function(x){
+  if (x %in% ndc.dat) {
+    sub.ndc <- subset( ndc.dat, proprietaryname == x )
+    return( unique(sub.ndc$productid) )
+  }
+}
+
+hold <- unlist( lapply(spd.dat$drugname_brand, ndc.pid ) )
+
+````
+
+
+
+
