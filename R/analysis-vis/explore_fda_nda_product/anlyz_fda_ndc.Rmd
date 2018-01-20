@@ -22,13 +22,6 @@ names(ndc.dat)
 
 ##Preliminary Exploration
 ###How many drugs have multiple active ingredients?
-```{r}
-occurences <- sapply( ndc.dat$productid, function(x) {
-  occur <- ndc.dat[ ndc.dat$productid==x, c("nonproprietaryname") ]
-  return( length( occur ) )
-})
-````
-
 Every entry in the original dataset corresponded to a unique **productid**...
 ```{r}
 length( unique(ndc.dat$productid) )
@@ -73,19 +66,19 @@ spd.dat[, upper.cols] <- sapply( spd.dat[, upper.cols], safe.lower )
 head(spd.dat)
 ````
 
-There seems to be some weird **drugname_brand** and **drugname_generic** entries.  I'm going to the **proprietaryname** column  If there are any matches I'm going to pull the corresponding **productids** and hold them in a vector.
+There seems to be some weird **drugname_brand** and **drugname_generic** entries.  I'm going to the search for them in the **proprietaryname** column  If there are any matches I'm going to pull the corresponding **productids** and hold them in a vector.
 ```{r}
 ndc.pid <- function(x){
   if (x %in% ndc.dat) {
-    sub.ndc <- subset( ndc.dat, proprietaryname == x )
-    return( unique(sub.ndc$productid) )
+    sub.ndc <- ndc.dat[ ndc.dat$proprietaryname == x , c('productid') ]
+    return( unlist ( unique(sub.ndc$productid) ) )
   }
 }
 
-hold <- unlist( lapply(spd.dat$drugname_brand, ndc.pid ) )
+hold <- unlist( sapply(spd.dat$drugname_brand, ndc.pid ) )
 
 ````
 
 
 
-
+  
