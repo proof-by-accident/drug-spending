@@ -66,19 +66,24 @@ spd.dat[, upper.cols] <- sapply( spd.dat[, upper.cols], safe.lower )
 head(spd.dat)
 ````
 
-There seems to be some weird **drugname_brand** and **drugname_generic** entries.  I'm going to the search for them in the **proprietaryname** column  If there are any matches I'm going to pull the corresponding **productids** and hold them in a vector.
+How many matches are there between speding_2011 and FDA_NDC?
 ```{r}
-ndc.pid <- function(x){
-  if (x %in% ndc.dat) {
-    sub.ndc <- ndc.dat[ ndc.dat$proprietaryname == x , c('productid') ]
-    return( unlist ( unique(sub.ndc$productid) ) )
-  }
-}
-
-hold <- unlist( sapply(spd.dat$drugname_brand, ndc.pid ) )
-
+sum( spd.dat$drugname_brand %in% ndc.dat$proprietaryname)
 ````
 
+Let's match the **proprietaryname** column to the **drugname_brand** column.  If there are any matches I'm going to pull the corresponding **productids** and hold them in a vector.
+```{r}
+match.ids <- ndc.dat[ ndc.dat$proprietaryname %in% spd.dat$drugname_brand, c('productid') ]
+length(match.ids)
+````
+
+How well does **drugname_generic** match against the **nonproprietaryname** column?  There 1741 of the generic drugnames in the **nonproprietaryname** column, and almost as many in the **substancename** column.  A pretty good amount of those are associated with a **drugname_brand** which is in the **proprietaryname** column.
+```{r}
+sum(spd.dat$drugname_generic %in% ndc.dat$nonproprietaryname)
+sum(spd.dat$drugname_generic %in% ndc.dat$substancename)
+sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$nonproprietaryname )
+sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$substancename )
+````
 
 
   
