@@ -122,11 +122,144 @@ $(document).ready(function () {
 </div>
 
 
-<div id="tidying" class="section level2">
-<h2>Tidying</h2>
-<p>Tidying was performed by the script “fda_nda_tidy.R”, it takes a long time to run so just import the dataset from the saved CSV</p>
+<div id="addressing-issue-70-questions" class="section level2">
+<h2>Addressing Issue #70 Questions</h2>
+<p>Read in the FDA_NDC data and Medicare spending data…</p>
 <pre class="r"><code>ndc.dat &lt;- read.csv('fda_ndc_product.csv')
 spd.dat &lt;- read.csv('spending_2011.csv')</code></pre>
+<p>What’s in there?</p>
+<pre class="r"><code>print('FDA_NDC names:')</code></pre>
+<pre><code>## [1] &quot;FDA_NDC names:&quot;</code></pre>
+<pre class="r"><code>names(ndc.dat)</code></pre>
+<pre><code>##  [1] &quot;productid&quot;                 &quot;productndc&quot;               
+##  [3] &quot;producttypename&quot;           &quot;proprietaryname&quot;          
+##  [5] &quot;proprietarynamesuffix&quot;     &quot;dosageformname&quot;           
+##  [7] &quot;routename&quot;                 &quot;startmarketingdate&quot;       
+##  [9] &quot;endmarketingdate&quot;          &quot;marketingcategoryname&quot;    
+## [11] &quot;applicationnumber&quot;         &quot;labelername&quot;              
+## [13] &quot;pharm_classes&quot;             &quot;deaschedule&quot;              
+## [15] &quot;nonproprietaryname&quot;        &quot;substancename&quot;            
+## [17] &quot;active_numerator_strength&quot; &quot;active_ingred_unit&quot;</code></pre>
+<pre class="r"><code>print('')</code></pre>
+<pre><code>## [1] &quot;&quot;</code></pre>
+<pre class="r"><code>print('spending_2011 names:')</code></pre>
+<pre><code>## [1] &quot;spending_2011 names:&quot;</code></pre>
+<pre class="r"><code>names(spd.dat)</code></pre>
+<pre><code>##  [1] &quot;X&quot;                               &quot;drugname_brand&quot;                 
+##  [3] &quot;drugname_generic&quot;                &quot;claim_count&quot;                    
+##  [5] &quot;total_spending&quot;                  &quot;user_count&quot;                     
+##  [7] &quot;total_spending_per_user&quot;         &quot;unit_count&quot;                     
+##  [9] &quot;unit_cost_wavg&quot;                  &quot;user_count_non_lowincome&quot;       
+## [11] &quot;out_of_pocket_avg_non_lowincome&quot; &quot;user_count_lowincome&quot;           
+## [13] &quot;out_of_pocket_avg_lowincome&quot;</code></pre>
+<div id="preliminaries" class="section level3">
+<h3>Preliminaries</h3>
+<p>Every entry in the original dataset corresponded to a unique <strong>productid</strong>…</p>
+<pre class="r"><code>length( unique(ndc.dat$productid) )</code></pre>
+<pre><code>## [1] 113156</code></pre>
+<p>…and there are a couple fewer <strong>productndcs</strong>. It seems like the <strong>productid</strong> would be the best way through which to cross-reference the datasets.</p>
+<pre class="r"><code>length( unique(ndc.dat$productndc) )</code></pre>
+<pre><code>## [1] 111397</code></pre>
+<pre class="r"><code>length( unique(ndc.dat$productid) ) - length( unique(ndc.dat$productndc) )</code></pre>
+<pre><code>## [1] 1759</code></pre>
+<p>For reference there are far fewer <strong>nonproprietarynames</strong> and <strong>substancenames</strong> than <strong>productids</strong></p>
+<pre class="r"><code>length( unique(ndc.dat$nonproprietaryname) )</code></pre>
+<pre><code>## [1] 13784</code></pre>
+<pre class="r"><code>length( unique(ndc.dat$substancename) )</code></pre>
+<pre><code>## [1] 4967</code></pre>
+</div>
+<div id="how-many-drugs-have-multiple-active-ingredients" class="section level3">
+<h3>How many drugs have multiple active ingredients?</h3>
+<p>Let’s see how many drugs have more than one active ingredient:</p>
+<pre class="r"><code>pid.agg.ndc &lt;- dcast(ndc.dat, productid ~ .)</code></pre>
+<pre><code>## Using active_ingred_unit as value column: use value.var to override.</code></pre>
+<pre><code>## Aggregation function missing: defaulting to length</code></pre>
+<pre class="r"><code>names( pid.agg.ndc ) &lt;- c('productid', 'occurences')
+print('About 26.5k:')</code></pre>
+<pre><code>## [1] &quot;About 26.5k:&quot;</code></pre>
+<pre class="r"><code>length( pid.agg.ndc[ pid.agg.ndc$occurences &gt; 1, 1] )</code></pre>
+<pre><code>## [1] 26559</code></pre>
+</div>
+<div id="how-many-total-of-the-drugs-can-be-matched-between-the-medicare-spending-datasets-and-the-fda_ndc_product-dataset" class="section level3">
+<h3>How many (total) of the drugs can be matched between the Medicare spending datasets and the FDA_NDC_Product dataset?</h3>
+<p>The spending dataset needs to be converted to lowercase for a few columns, in order to match with the FDA_NDC data. To do this I’m going to wrap the tolower() function in an error catcher, as this was used to lowercase the FDA_NDC dataset during tidying and things won’t get derailed by weird cornercases.</p>
+<pre class="r"><code>safe.lower &lt;- function(x){
+    result &lt;- tryCatch({
+        sapply( x, tolower)
+    },
+    error = function(e){
+        return( as.character(x) )
+    })
+    return( result )
+    }
+
+upper.cols &lt;- c('drugname_brand', 'drugname_generic')
+spd.dat[, upper.cols] &lt;- sapply( spd.dat[, upper.cols], safe.lower )
+
+head(spd.dat)</code></pre>
+<pre><code>##   X           drugname_brand               drugname_generic claim_count
+## 1 0                  10 wash           sulfacetamide sodium          24
+## 2 1 1st tier unifine pentips           pen needle, diabetic        2472
+## 3 2        60pse-400gfn-20dm guaifenesin/dm/pseudoephedrine          12
+## 4 3                    8-mop                    methoxsalen          11
+## 5 4                 a-b otic          antipyrine/benzocaine          30
+## 6 5                  abelcet   amphotericin b lipid complex         363
+##   total_spending user_count total_spending_per_user unit_count
+## 1        1569.19         16                98.07438       5170
+## 2       57666.73        893                64.57641     293160
+## 3         350.10         11                31.82727        497
+## 4        9003.26         NA                      NA        298
+## 5         212.86         29                 7.34000        451
+## 6      455566.10         97              4696.55773      49027
+##   unit_cost_wavg user_count_non_lowincome out_of_pocket_avg_non_lowincome
+## 1      0.3035184                       NA                              NA
+## 2      0.1967660                      422                         42.3472
+## 3      0.7044266                       NA                              NA
+## 4     30.2122819                       NA                              NA
+## 5      0.4719734                       NA                              NA
+## 6      9.2921472                       49                        402.0480
+##   user_count_lowincome out_of_pocket_avg_lowincome
+## 1                   NA                          NA
+## 2                  471                     7.54586
+## 3                   NA                          NA
+## 4                   NA                          NA
+## 5                   NA                          NA
+## 6                   48                     6.41250</code></pre>
+<p>How many matches are there between speeding_2011 and FDA_NDC?</p>
+<pre class="r"><code>sum( spd.dat$drugname_brand %in% ndc.dat$proprietaryname)</code></pre>
+<pre><code>## [1] 2134</code></pre>
+</div>
+<div id="how-many-of-the-drugs-found-in-the-medicare-spending-datasets-have-multiple-active-ingredients" class="section level3">
+<h3>How many of the drugs found in the Medicare spending datasets have multiple active ingredients?</h3>
+<p>Let’s match the <strong>proprietaryname</strong> column to the <strong>drugname_brand</strong> column. If there are any matches I’m going to pull the corresponding <strong>productids</strong> and hold them in a vector.</p>
+<pre class="r"><code>match.ids &lt;- ndc.dat[ ndc.dat$proprietaryname %in% spd.dat$drugname_brand, c('productid') ]
+match.ids &lt;- as.character( match.ids )
+length(match.ids)</code></pre>
+<pre><code>## [1] 32567</code></pre>
+<p>How many unique match ids are there?</p>
+<pre class="r"><code>length(unique(match.ids))</code></pre>
+<pre><code>## [1] 29585</code></pre>
+<p>Since there are about 32.5k total <strong>match.ids</strong> and 29.5k unique <strong>match.ids</strong> then there are around 3k spending_2011 <strong>drugname_brands</strong> that have multiple active ingredients.</p>
+<pre class="r"><code>length(match.ids) - length(unique(match.ids))</code></pre>
+<pre><code>## [1] 2982</code></pre>
+<p>How well does <strong>drugname_generic</strong> match against the <strong>nonproprietaryname</strong> column? There 1741 of the generic drugnames in the <strong>nonproprietaryname</strong> column, and almost as many in the <strong>substancename</strong> column. A pretty good amount of those are associated with a <strong>drugname_brand</strong> that also matches in the <strong>proprietaryname</strong> column.</p>
+<pre class="r"><code>#Number of drugname_generics that match in nonproprietaryname
+sum(spd.dat$drugname_generic %in% ndc.dat$nonproprietaryname)</code></pre>
+<pre><code>## [1] 1741</code></pre>
+<pre class="r"><code>#Number of drugname_generics that match in substancename
+sum(spd.dat$drugname_generic %in% ndc.dat$substancename)</code></pre>
+<pre><code>## [1] 1598</code></pre>
+<pre class="r"><code>#Number of drugname_brands that match in proprietaryname that also share a row with a drugname_generic that matches a nonproprietaryname
+sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$nonproprietaryname )</code></pre>
+<pre><code>## [1] 1388</code></pre>
+<pre class="r"><code>#Number of drugname_brands that match in proprietaryname that also share a row with a drugname_generic that matches a substancename
+sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$substancename )</code></pre>
+<pre><code>## [1] 1292</code></pre>
+<p>I’m going to create a subvector of <strong>match.ids</strong> which contains only ids that occur more than once, to see if the spending data <strong>drugname_generic</strong> also contains multiple names.</p>
+<pre class="r"><code>id.occs &lt;- as.data.frame( table( match.ids ) )
+mult.act.ingd &lt;- id.occs[ id.occs$Freq &gt; 1, ]$match.ids</code></pre>
+<p>(IN PROGRESS)</p>
+</div>
 </div>
 
 

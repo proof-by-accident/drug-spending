@@ -89,21 +89,25 @@ length(match.ids)
 How many unique match ids are there?
 ```{r}
 length(unique(match.ids))
+````
 
-print('around 3k of the drugname_brand matches correspond to more than one active ingredient in the FDA_NDA dataset:')
+Since there are about 32.5k total **match.ids** and 29.5k unique **match.ids** then there are around 3k spending_2011 **drugname_brands** that have multiple active ingredients.
+```{r}
 length(match.ids) - length(unique(match.ids))
 ````
 
-
 How well does **drugname_generic** match against the **nonproprietaryname** column?  There 1741 of the generic drugnames in the **nonproprietaryname** column, and almost as many in the **substancename** column.  A pretty good amount of those are associated with a **drugname_brand** that also matches in the **proprietaryname** column.
 ```{r}
-print('Number of drugname_generic in nonproprietaryname:')
+#Number of drugname_generics that match in nonproprietaryname
 sum(spd.dat$drugname_generic %in% ndc.dat$nonproprietaryname)
-print('Number of drugname_generic in substancename:')
+
+#Number of drugname_generics that match in substancename
 sum(spd.dat$drugname_generic %in% ndc.dat$substancename)
-print('Number of drugname_brand in proprietaryname that also have drugname_generic in nonproprietaryname:')
+
+#Number of drugname_brands that match in proprietaryname that also share a row with a drugname_generic that matches a nonproprietaryname
 sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$nonproprietaryname )
-print('Number of drugname_brand in proprietaryname that also have drugname_generic in substancename::')
+
+#Number of drugname_brands that match in proprietaryname that also share a row with a drugname_generic that matches a substancename
 sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$substancename )
 ````
 
@@ -113,3 +117,4 @@ id.occs <- as.data.frame( table( match.ids ) )
 mult.act.ingd <- id.occs[ id.occs$Freq > 1, ]$match.ids
 ````
   
+(IN PROGRESS)
