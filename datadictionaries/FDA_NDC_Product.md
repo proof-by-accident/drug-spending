@@ -1,7 +1,7 @@
 # FDA's National Drug Code Directory
 
 ## Data files ([available at data.world](https://data.world/data4democracy/drug-spending))
-* CSV: `FDA_NDC_Product.csv`
+* CSV: `FDA_NDC_Product.csv` (Original), `fda_ndc_product.csv` (Tidied)
 
 ## Link(s) to code used for scraping, tidying, etc, if applicable:
 

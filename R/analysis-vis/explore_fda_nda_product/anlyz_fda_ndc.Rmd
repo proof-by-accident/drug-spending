@@ -8,8 +8,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(reshape2)
 ```
 
-## Tidying
-Let's read in our data...
+##Addressing Issue #70 Questions
+
+Read in the FDA_NDC data and Medicare spending data...
 ```{r}
 ndc.dat <- read.csv('fda_ndc_product.csv')
 spd.dat <- read.csv('spending_2011.csv')
@@ -17,11 +18,15 @@ spd.dat <- read.csv('spending_2011.csv')
 
 What's in there?
 ```{r}
+print('FDA_NDC names:')
 names(ndc.dat)
+print('')
+print('spending_2011 names:')
+names(spd.dat)
 ````
 
-##Preliminary Exploration
-###How many drugs have multiple active ingredients?
+
+###Preliminaries
 Every entry in the original dataset corresponded to a unique **productid**...
 ```{r}
 length( unique(ndc.dat$productid) )
@@ -33,22 +38,23 @@ length( unique(ndc.dat$productndc) )
 length( unique(ndc.dat$productid) ) - length( unique(ndc.dat$productndc) )
 ````
 
-There are far fewer **nonproprietarynames** and **substancenames**.
+For reference there are far fewer **nonproprietarynames** and **substancenames** than **productids**
 ```{r}
 length( unique(ndc.dat$nonproprietaryname) )
 length( unique(ndc.dat$substancename) )
 ````
 
+###How many drugs have multiple active ingredients?
 Let's see how many drugs have more than one active ingredient:
 ```{r}
 pid.agg.ndc <- dcast(ndc.dat, productid ~ .)
 names( pid.agg.ndc ) <- c('productid', 'occurences')
-#About 26k:
+print('About 26.5k:')
 length( pid.agg.ndc[ pid.agg.ndc$occurences > 1, 1] )
 ````
 
-###Comparing to the spending_2011 dataset
-The spending dataset needs to be converted to lowercase for a few columns.  To do this I'm going to wrap the tolower() function in an error catcher, as this was used to lowercase the FDA_NDC dataset as well and things won't get derailed by weird cornercases.
+###How many (total) of the drugs can be matched between the Medicare spending datasets and the FDA_NDC_Product dataset?
+The spending dataset needs to be converted to lowercase for a few columns, in order to match with the FDA_NDC data.  To do this I'm going to wrap the tolower() function in an error catcher, as this was used to lowercase the FDA_NDC dataset during tidying and things won't get derailed by weird cornercases.
 ```{r}
 safe.lower <- function(x){
     result <- tryCatch({
@@ -66,24 +72,44 @@ spd.dat[, upper.cols] <- sapply( spd.dat[, upper.cols], safe.lower )
 head(spd.dat)
 ````
 
-How many matches are there between speding_2011 and FDA_NDC?
+How many matches are there between speeding_2011 and FDA_NDC?
 ```{r}
 sum( spd.dat$drugname_brand %in% ndc.dat$proprietaryname)
 ````
 
+
+###How many of the drugs found in the Medicare spending datasets have multiple active ingredients?
 Let's match the **proprietaryname** column to the **drugname_brand** column.  If there are any matches I'm going to pull the corresponding **productids** and hold them in a vector.
 ```{r}
 match.ids <- ndc.dat[ ndc.dat$proprietaryname %in% spd.dat$drugname_brand, c('productid') ]
+match.ids <- as.character( match.ids )
 length(match.ids)
 ````
 
-How well does **drugname_generic** match against the **nonproprietaryname** column?  There 1741 of the generic drugnames in the **nonproprietaryname** column, and almost as many in the **substancename** column.  A pretty good amount of those are associated with a **drugname_brand** which is in the **proprietaryname** column.
+How many unique match ids are there?
 ```{r}
-sum(spd.dat$drugname_generic %in% ndc.dat$nonproprietaryname)
-sum(spd.dat$drugname_generic %in% ndc.dat$substancename)
-sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$nonproprietaryname )
-sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$substancename )
+length(unique(match.ids))
+
+print('around 3k of the drugname_brand matches correspond to more than one active ingredient in the FDA_NDA dataset:')
+length(match.ids) - length(unique(match.ids))
 ````
 
 
+How well does **drugname_generic** match against the **nonproprietaryname** column?  There 1741 of the generic drugnames in the **nonproprietaryname** column, and almost as many in the **substancename** column.  A pretty good amount of those are associated with a **drugname_brand** that also matches in the **proprietaryname** column.
+```{r}
+print('Number of drugname_generic in nonproprietaryname:')
+sum(spd.dat$drugname_generic %in% ndc.dat$nonproprietaryname)
+print('Number of drugname_generic in substancename:')
+sum(spd.dat$drugname_generic %in% ndc.dat$substancename)
+print('Number of drugname_brand in proprietaryname that also have drugname_generic in nonproprietaryname:')
+sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$nonproprietaryname )
+print('Number of drugname_brand in proprietaryname that also have drugname_generic in substancename::')
+sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$substancename )
+````
+
+I'm going to create a subvector of **match.ids** which contains only ids that occur more than once, to see if the spending data **drugname_generic** also contains multiple names.
+```{r}
+id.occs <- as.data.frame( table( match.ids ) )
+mult.act.ingd <- id.occs[ id.occs$Freq > 1, ]$match.ids
+````
   

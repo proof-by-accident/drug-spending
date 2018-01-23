@@ -136,3 +136,15 @@ is developed with similar guiding principles, taxonomy, and structure of the USP
 
 Link to full data dictionary: [usp_drug_classification.md](usp_drug_classification.md)
 
+---
+
+#### 9. FDA NDC Product
+###### Formats: CSV
+###### Original Source: [FDA](https://www.fda.gov/Drugs/InformationOnDrugs/ucm142438.htm)
+
+This dataset provides a link between drug names or ID numbers and the active ingredients contained in each drug.
+
+This dataset was created as part of The Drug Listing Act of 1972, which requires drug manufacturers/distributors to provide a full list of currently marketed drugs. The information is submitted by the  labeler (manufacturer, repackager, or distributor) to the FDA. It seems that inclusion in the NDC directory does not mean that the drug is FDA approved. The dataset includes information about active ingredients in a drug and their dosing, who produces the drug, and the pharmacological mechanism by which it acts.
+
+Link to full data dictionary: [usp_drug_classification.md](usp_drug_classification.md)
+
