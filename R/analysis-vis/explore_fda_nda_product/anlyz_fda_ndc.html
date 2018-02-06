@@ -231,12 +231,13 @@ head(spd.dat)</code></pre>
 </div>
 <div id="how-many-of-the-drugs-found-in-the-medicare-spending-datasets-have-multiple-active-ingredients" class="section level3">
 <h3>How many of the drugs found in the Medicare spending datasets have multiple active ingredients?</h3>
+<p>Let’s join the spending and FDA_NDC datasets</p>
 <p>Let’s match the <strong>proprietaryname</strong> column to the <strong>drugname_brand</strong> column. If there are any matches I’m going to pull the corresponding <strong>productids</strong> and hold them in a vector.</p>
 <pre class="r"><code>match.ids &lt;- ndc.dat[ ndc.dat$proprietaryname %in% spd.dat$drugname_brand, c('productid') ]
 match.ids &lt;- as.character( match.ids )
 length(match.ids)</code></pre>
 <pre><code>## [1] 32567</code></pre>
-<p>How many unique match ids are there?</p>
+<p>How many unique match ids are there? Testing the <code>proprietaryname</code></p>
 <pre class="r"><code>length(unique(match.ids))</code></pre>
 <pre><code>## [1] 29585</code></pre>
 <p>Since there are about 32.5k total <strong>match.ids</strong> and 29.5k unique <strong>match.ids</strong> then there are around 3k spending_2011 <strong>drugname_brands</strong> that have multiple active ingredients.</p>
@@ -255,9 +256,7 @@ sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_ge
 <pre class="r"><code>#Number of drugname_brands that match in proprietaryname that also share a row with a drugname_generic that matches a substancename
 sum(spd.dat[ spd.dat$drugname_brand %in% ndc.dat$proprietaryname, c('drugname_generic') ] %in% ndc.dat$substancename )</code></pre>
 <pre><code>## [1] 1292</code></pre>
-<p>I’m going to create a subvector of <strong>match.ids</strong> which contains only ids that occur more than once, to see if the spending data <strong>drugname_generic</strong> also contains multiple names.</p>
-<pre class="r"><code>id.occs &lt;- as.data.frame( table( match.ids ) )
-mult.act.ingd &lt;- id.occs[ id.occs$Freq &gt; 1, ]$match.ids</code></pre>
+<pre class="r"><code>#ndc.spd.join &lt;- join(spd.dat, ndc.dat, type=&quot;inner&quot;, by=c('proprietaryname'))</code></pre>
 <p>(IN PROGRESS)</p>
 </div>
 </div>
